@@ -15,17 +15,17 @@ Triplet Fingerprinting Paper: Triplet Fingerprinting: More Practical and Portabl
 Feature Engineering
 
 #Feature Engineering based of CDN bursts
-				F = []
-				k = 1
-				B = []
-				initial_time = final_filtered_testing['Time'].iloc[0]
-				group_packet_size = 0
-				for index, row in final_filtered_testing.iterrows():
-					if (row[0] - initial_time < threshold):
-						group_packet_size += row[2]
-						B.append([row[0], row[1], row[2], k, group_packet_size, row[3]])
-					else:
-						F.append([k, group_packet_size])
-						group_packet_size = 0
-						k += 1
+F = []
+k = 1
+B = []
+initial_time = final_filtered_testing['Time'].iloc[0]
+group_packet_size = 0
+for index, row in final_filtered_testing.iterrows():
+	if (row[0] - initial_time < threshold):
+		group_packet_size += row[2]
+		B.append([row[0], row[1], row[2], k, group_packet_size, row[3]])
+	else:
+		F.append([k, group_packet_size])
+		group_packet_size = 0
+		k += 1
 
