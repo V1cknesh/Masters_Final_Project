@@ -29,3 +29,6 @@ for index, row in final_filtered_testing.iterrows():
 		group_packet_size = 0
 		k += 1
 
+
+
+Run deep-fingerprinting-utility.py or triplet-fingerprinting-utility.py for model testing
