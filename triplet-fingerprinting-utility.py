@@ -13,7 +13,7 @@ import gc
 from zlib import crc32
 import multiprocessing as mp
 
-rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/youtube/0.09_data'
+rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/twitter/0.09_data'
 
 
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
@@ -33,6 +33,11 @@ for subdir, dirs, files in os.walk(rootdir):
                 filename = subdir + "/" + file
                 if file.split("_")[0] == "training":
                     df = pd.read_csv(filename, index_col=0)[1:]
+                    length_of_data = len(df.index)
+                    lower_quartile = int(0.15 * length_of_data)
+                    upper_quartile = int(0.85 * length_of_data)
+                    df.drop_duplicates(inplace=True)
+                    df = df[0: len(df.index): 250]
                     df['PACKET_SIZE'] = pd.to_numeric(df['PACKET_SIZE'], errors='coerce').astype('float32')
                     df['TOTAL_PACKET_SIZE'] = pd.to_numeric(df['TOTAL_PACKET_SIZE'], errors='coerce').astype('float32')
                     df['CUMULATIVE_PACKET_SIZE'] = pd.to_numeric(df['CUMULATIVE_PACKET_SIZE'], errors='coerce').astype('float32')
@@ -41,6 +46,11 @@ for subdir, dirs, files in os.walk(rootdir):
                     training.append(df)
                 else:
                     tf = pd.read_csv(filename, index_col=0)[1:]
+                    length_of_data = len(tf.index)
+                    lower_quartile = int(0.15 * length_of_data)
+                    upper_quartile = int(0.85 * length_of_data)
+                    tf.drop_duplicates(inplace=True)
+                    tf = tf[0: len(tf.index): 250]
                     tf['PACKET_SIZE'] = pd.to_numeric(tf['PACKET_SIZE'], errors='coerce').astype('float32')
                     tf['TOTAL_PACKET_SIZE'] = pd.to_numeric(tf['TOTAL_PACKET_SIZE'], errors='coerce').astype('float32')
                     tf['CUMULATIVE_PACKET_SIZE'] = pd.to_numeric(tf['CUMULATIVE_PACKET_SIZE'], errors='coerce').astype('float32')
@@ -85,6 +95,26 @@ for i in range(len(y_training)):
 id_to_classid = {v: c for c, traces in classid_to_ids.items() for v in traces}
 
 
+#testing
+
+NUMBER_OF_PAGES_testing=len(pd.unique(y_valid['PAGE_NUMBER']))
+#new_triplet_set = pd.concat([X_train, X_valid])
+new_triplet_set_testing = X_valid.to_numpy()[:, :,np.newaxis]
+new_test_set = X_valid.to_numpy()[:, :,np.newaxis]
+#y_training = pd.concat([y_train, y_valid])
+y_testing = y_valid
+
+classid_to_ids_testing = {}
+id_to_classids_testing = {}
+for i in range(len(y_testing)):
+    page_number = y_testing['PAGE_NUMBER'].iloc[i]
+    if page_number not in classid_to_ids_testing:
+        classid_to_ids_testing[page_number] = [i,]
+    else:
+        classid_to_ids_testing[page_number].append(i)
+
+id_to_classids_testing = {v: c for c, traces in classid_to_ids_testing.items() for v in traces}
+
 
 #classid_to_ids = {k: [path_to_id[path] for path in v] for k, v in new_triplet_set.items()}
 #Triplet fingerprinting steps
@@ -111,7 +141,27 @@ def build_positive_pairs(class_id_range):
     return np.array(listX1)[perm], np.array(listX2)[perm]
 
 
+def build_pos_pairs_for_id_testing(classid): # classid --> e.g. 0
+    try:
+        traces = classid_to_ids[classid]
+        pos_pairs = [(traces[i], traces[j]) for i in range(len(traces)) for j in range(i+1, len(traces))]
+        return pos_pairs
+    except Exception:
+        print("Exception")
 
+
+def build_positive_pairs_testing(class_id_range):
+    # class_id_range = range(0, num_classes)
+    listX1 = []
+    listX2 = []
+    for class_id in pd.unique(y_train['PAGE_NUMBER']):
+        pos = build_pos_pairs_for_id_testing(class_id)
+        # -- pos [(1, 9), (0, 9), (3, 9), (4, 8), (1, 4),...] --> (anchor example, positive example)
+        for pair in pos:
+            listX1 += [pair[0]] # identity
+            listX2 += [pair[1]] # positive example
+    perm = np.random.permutation(len(listX1))
+    return np.array(listX1)[perm], np.array(listX2)[perm]
 
 #Build similarity pair
 def build_similarities(convolutional_model, packet_sizes):
@@ -183,6 +233,11 @@ maximum=max(pd.unique(y_train['PAGE_NUMBER']))
 anchor_train, positive_train = build_positive_pairs(range(minimum, maximum + 1))
 all_traces_train_idx = list(set(anchor_train) | set(positive_train))
 
+minimum_test=min(pd.unique(y_valid['PAGE_NUMBER']))
+maximum_test=max(pd.unique(y_valid['PAGE_NUMBER']))
+anchor_test, positive_test = build_positive_pairs(range(minimum_test, maximum_test + 1))
+all_traces_test_idx = list(set(anchor_test) | set(positive_test))
+
 print(new_triplet_set.shape)
 print(anchor_train.shape)
 print(positive_train.shape)
@@ -223,9 +278,11 @@ training_csv_log = keras.callbacks.CSVLogger('log/Train_Log_%s.csv'%description,
 prediction_csv_log = keras.callbacks.CSVLogger('log/Prediction_Log_%s.csv'%description, append=True, separator=';')
 gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, convolutional_neural_network)
 epochs = 1
-for epoch in range(epochs): 
-    model_triplet.fit_generator(generator=gen_hard.next_train(), steps_per_epoch= 30, epochs=1, verbose=1, callbacks=[training_csv_log])
-    gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, convolutional_neural_network)
+model_triplet.fit_generator(generator=gen_hard.next_train(), steps_per_epoch= 30, epochs=1, verbose=1, callbacks=[training_csv_log])
+gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, convolutional_neural_network)
+pred=model_triplet.predict_generator(gen_hard.next_train(), steps=30, verbose=1, callbacks=[prediction_csv_log])
+
+
 
 
 
