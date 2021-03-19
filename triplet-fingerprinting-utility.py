@@ -13,6 +13,8 @@ import gc
 from zlib import crc32
 import multiprocessing as mp
 
+from sklearn.metrics import multilabel_confusion_matrix
+
 rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/twitter/0.09_data'
 
 
@@ -97,23 +99,7 @@ id_to_classid = {v: c for c, traces in classid_to_ids.items() for v in traces}
 
 #testing
 
-NUMBER_OF_PAGES_testing=len(pd.unique(y_valid['PAGE_NUMBER']))
-#new_triplet_set = pd.concat([X_train, X_valid])
-new_triplet_set_testing = X_valid.to_numpy()[:, :,np.newaxis]
-new_test_set = X_valid.to_numpy()[:, :,np.newaxis]
-#y_training = pd.concat([y_train, y_valid])
-y_testing = y_valid
-
-classid_to_ids_testing = {}
-id_to_classids_testing = {}
-for i in range(len(y_testing)):
-    page_number = y_testing['PAGE_NUMBER'].iloc[i]
-    if page_number not in classid_to_ids_testing:
-        classid_to_ids_testing[page_number] = [i,]
-    else:
-        classid_to_ids_testing[page_number].append(i)
-
-id_to_classids_testing = {v: c for c, traces in classid_to_ids_testing.items() for v in traces}
+print(NUMBER_OF_PAGES)
 
 
 #classid_to_ids = {k: [path_to_id[path] for path in v] for k, v in new_triplet_set.items()}
@@ -275,12 +261,141 @@ class TripletGenerator():
 
 description = 'Triplet_Model'
 training_csv_log = keras.callbacks.CSVLogger('log/Train_Log_%s.csv'%description, append=True, separator=';')
-prediction_csv_log = keras.callbacks.CSVLogger('log/Prediction_Log_%s.csv'%description, append=True, separator=';')
-gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, convolutional_neural_network)
-epochs = 1
-model_triplet.fit_generator(generator=gen_hard.next_train(), steps_per_epoch= 30, epochs=1, verbose=1, callbacks=[training_csv_log])
-gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, convolutional_neural_network)
-pred=model_triplet.predict_generator(gen_hard.next_train(), steps=30, verbose=1, callbacks=[prediction_csv_log])
+gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, None)
+epochs = 10
+for i in range(epochs):
+    model_triplet.fit(gen_hard.next_train(), steps_per_epoch=30, epochs=1, verbose=1)
+    gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, convolutional_neural_network)
+
+
+
+
+#Testing set
+X_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_testing-0.09.csv', index_col=0)
+y_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.09.csv', index_col=0)
+
+
+
+
+#testing
+
+NUMBER_OF_PAGES_testing=len(pd.unique(y_valid['PAGE_NUMBER']))
+#new_triplet_set = pd.concat([X_train, X_valid])
+print(NUMBER_OF_PAGES)
+new_triplet_set_testing = X_valid.to_numpy()[:, :,np.newaxis]
+new_test_set = X_valid.to_numpy()[:, :,np.newaxis]
+#y_training = pd.concat([y_train, y_valid])
+y_testing = y_valid
+
+classid_to_ids_testing = {}
+id_to_classids_testing = {}
+for i in range(len(y_testing)):
+    page_number = y_testing['PAGE_NUMBER'].iloc[i]
+    if page_number not in classid_to_ids_testing:
+        classid_to_ids_testing[page_number] = [i,]
+    else:
+        classid_to_ids_testing[page_number].append(i)
+
+id_to_classids_testing = {v: c for c, traces in classid_to_ids_testing.items() for v in traces}
+
+def build_pos_pairs_for_id_testing(classid): # classid --> e.g. 0
+    try:
+        traces = classid_to_ids_testing[classid]
+        pos_pairs = [(traces[i], traces[j]) for i in range(len(traces)) for j in range(i+1, len(traces))]
+        return pos_pairs
+    except Exception:
+        print("Exception")
+
+
+def build_positive_pairs_testing(class_id_range):
+    # class_id_range = range(0, num_classes)
+    listX1 = []
+    listX2 = []
+    for class_id in pd.unique(y_valid['PAGE_NUMBER']):
+        pos = build_pos_pairs_for_id_testing(class_id)
+        # -- pos [(1, 9), (0, 9), (3, 9), (4, 8), (1, 4),...] --> (anchor example, positive example)
+        for pair in pos:
+            listX1 += [pair[0]] # identity
+            listX2 += [pair[1]] # positive example
+    perm = np.random.permutation(len(listX1))
+    return np.array(listX1)[perm], np.array(listX2)[perm]
+
+#Build similarity pair
+def build_similarities(convolutional_model, packet_sizes):
+    embs = convolutional_model.predict(packet_sizes)
+    embs = embs / np.linalg.norm(embs, axis=-1, keepdims=True)
+    return np.dot(embs, embs.T)
+
+
+
+#Build negative pair
+def build_negatives(anchor_indexes, positive_indexes, similarities, negative_indexes, num_retries=50):
+    if similarities is None:
+        return random.sample(negative_indexes,len(anchor_indexes))
+    final_neg = []
+    for (anchor_indexes, positive_indexes) in zip(anchor_indexes, positive_indexes):
+        anchor_class = id_to_classid[anchor_indexes]
+        possible_ids = list(set(negative_indexes) & set(np.where((similarities[anchor_indexes] + alpha_value) > similarities[anchor_indexes, positive_indexes])[0]))
+        appended = False
+        for iteration in range(num_retries):
+            if len(possible_ids) == 0:
+                break 
+            idx_neg = random.choice(possible_ids)
+            if id_to_classid[idx_neg] != anchor_class:
+                final_neg.append(idx_neg)
+                appended = True
+                break
+        if not appended:
+            final_neg.append(random.choice(negative_indexes))
+    return final_neg
+
+class TripletGenerator():
+    def __init__(self, anchor_train, positive_train, batch_size, packet_sizes, negative_traces_index, convolutional_model):
+        self.batch_size = batch_size
+        self.packet_sizes = packet_sizes
+        self.anchor_train = anchor_train
+        self.traces = packet_sizes
+        self.positive_train = positive_train
+        self.current_training_index = 0
+        self.number_of_samples = anchor_train.shape[0]
+        self.negative_traces_index = negative_traces_index
+        self.all_anchors = list(set(anchor_train))
+        self.mapping_pos = {v: k for k, v in enumerate(self.all_anchors)}
+        self.mapping_neg = {k: v for k, v in enumerate(self.negative_traces_index)}
+        if convolutional_model:
+            self.similarities = build_similarities(convolutional_model, self.packet_sizes)
+        else:
+            self.similarities = None
+
+    def next_train(self):
+        while 1:
+            self.current_training_index += self.batch_size
+            if self.current_training_index >= self.number_of_samples:
+                self.current_training_index = 0
+            anchor_traces = self.anchor_train[self.current_training_index:self.current_training_index + self.batch_size]
+            positive_traces = self.positive_train[self.current_training_index:self.current_training_index + self.batch_size]
+            negative_traces = build_negatives(anchor_traces, positive_traces, self.similarities, self.negative_traces_index)
+            yield ([self.traces[anchor_traces], self.traces[positive_traces], self.traces[negative_traces]], np.zeros(shape=(anchor_traces.shape[0])))
+
+
+
+minimum_test=min(pd.unique(y_valid['PAGE_NUMBER']))
+maximum_test=max(pd.unique(y_valid['PAGE_NUMBER']))
+anchor_test, positive_test = build_positive_pairs_testing(range(minimum_test, maximum_test + 1))
+all_traces_test_idx = list(set(anchor_test) | set(positive_test))
+
+print(new_triplet_set_testing.shape)
+print(anchor_test.shape)
+print(positive_test.shape)
+print(len(all_traces_test_idx))
+
+y_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
+y_valid = np_utils.to_categorical(y_valid['PAGE_NUMBER'].to_numpy())
+
+gen_hard = TripletGenerator(anchor_test, positive_test, 30, new_triplet_set_testing, all_traces_test_idx, convolutional_neural_network)
+pre_cla = model_triplet.predict(gen_hard.next_train(), verbose=1, steps=128)
+
+print(pre_cla)
 
 
 

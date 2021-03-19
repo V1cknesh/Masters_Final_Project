@@ -11,7 +11,14 @@ from zlib import crc32
 import multiprocessing as mp
 import os
 import random
+from sklearn.metrics import multilabel_confusion_matrix
 from DeepFingerprinting2 import DeepFingerprintingNeuralNetwork
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc
+from kerastuner.tuners import RandomSearch
+import kerastuner as kt
+from sklearn.preprocessing import label_binarize
 
 threshold="0.09"
 social_media_site="fb"
@@ -72,62 +79,90 @@ for subdir, dirs, files in os.walk(rootdir):
 random.seed(0)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-X_train = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_training-0.1.csv', index_col=0)[['TIME','CUMULATIVE_PACKET_SIZE']].to_numpy()
+X_train = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_training-0.1.csv', index_col=0).to_numpy()
 y_train = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_training-0.1.csv', index_col=0)
-X_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_testing-0.1.csv', index_col=0)[['TIME','CUMULATIVE_PACKET_SIZE']].to_numpy() 
+X_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_testing-0.1.csv', index_col=0).to_numpy() 
 y_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
 
 
 # we need a [Length x 1] x n shape as input to the DFNet (Tensorflow)
 X_train = X_train[:, :,np.newaxis]
 X_valid = X_valid[:, :,np.newaxis]
-INPUT_SHAPE = (2,1)
+INPUT_SHAPE = (5,1)
 
 NUMBER_OF_PAGES=101
-
 #NUMBER_OF_PAGES=97
 # convert class vectors to binary class matrices
 y_train = np_utils.to_categorical(y_train['PAGE_NUMBER'].to_numpy())
 y_valid = np_utils.to_categorical(y_valid['PAGE_NUMBER'].to_numpy())
 #DeepFingerprinting Steps
 model = DeepFingerprintingNeuralNetwork.neuralnetwork(input=INPUT_SHAPE, N=NUMBER_OF_PAGES)
-model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=3, verbose=1, validation_data=(X_valid, y_valid))
-X_valid = X_valid.astype('float32')
-X_valid = X_valid[:, :,np.newaxis]
-result = model.predict(X_valid, verbose=2)
+#tuner_search=RandomSearch(model, objective='val_accuracy', max_trials=5, directory='./output', project_name='deep_fingerprinting')
+model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=1, verbose=1, validation_data=(X_valid, y_valid))
 
-TP = 0
-labels = np
-FP = 0
-TN = 0
-FN = 0
-for i in range(len(result)):
-    sm_vector = result[i]
-    predicted_class = np.argmax(sm_vector)
-    max_prob = max(sm_vector)
-    if max_prob >= 0.8: # predicted as Monitored and actual site is Monitored
-        TP = TP + 1
-    else: # predicted as Unmonitored and actual site is Monitored
-        FP = FP + 1
 
-# ==============================================================
-# Test with Unmonitored testing instances
-# evaluation
-for i in range(len(result)):
-    sm_vector = result[i]
-    predicted_class = np.argmax(sm_vector)
-    max_prob = max(sm_vector)
 
-    #if max_prob >= 0.8: # predicted as Monitored and actual site is Unmonitored
-        #FP = FP + 1
-    #else: # predicted as Unmonitored and actual site is Unmonitored
-        #TN = TN + 1
+pre_cla = model.predict(X_valid, verbose=2, batch_size=128)
 
-print("TP : ", TP)
-print("FP : ", FP)
-print("True positive rate : ", TP / (TP + FP))
-print("False positive rate : ", FP / (TP + TN))
-print("Accuracy  : ", (TP + TN) / len(y_valid))
+cm = multilabel_confusion_matrix(y_valid.argmax(axis=1), pre_cla.argmax(axis=1))
+print(cm)
+
+TN = cm[:, 0, 0]
+TP = cm[:, 1, 1]
+FN = cm[:, 1, 0]
+FP = cm[:, 0, 1]
+print("True Positive Rates")
+print("*******************")
+print(TP / (TP + FN))
+print("*******************")
+print("False Positive Rates")
+print("*******************")
+print(FP / (FP + TN))
+print("*******************")
+
+y_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
+labels = y_valid['PAGE_NUMBER'].unique()
+y_valid = np_utils.to_categorical(y_valid['PAGE_NUMBER'].to_numpy())
+y_true = y_valid.argmax(axis=1)
+y_test = label_binarize(y_true, classes= labels)
+y_pred = label_binarize(pre_cla.argmax(axis=1), classes=labels)
+auc_keras = roc_auc_score(y_test, y_pred, multi_class='ovo')
+print("AUC Score")
+print("*******************")
+print(auc_keras)
+
+print("Plot the Micro Average of ROC of all classes")
+print("*******************")
+
+FPR, TPR, threshold_keras = roc_curve(y_test.ravel(), y_pred.ravel())
+
+plt.figure()
+plt.plot(FPR, TPR, label='Micro average ROC curve')
+
+all_fpr = []
+for i in range(0,100):
+    try:
+        all_fpr += [FPR[i],]
+        FPR[i]
+    except Exception:
+        continue
+all_fpr = np.unique(all_fpr)
+mean_tpr = np.zeros_like(all_fpr)
+for i in range(0,100):
+    try:
+        mean_tpr += interp(all_fpr, FPR[i], TPR[i])
+    except Exception:
+        continue
+ 
+auc_curve = auc(FPR, TPR)
+
+print("Plot the Macro Average of ROC of all classes")
+print("*******************")
+
+plt.figure()
+plt.plot(FPR, TPR, label='Macro Average Curve')
+plt.show()
+
 
 gc.collect()
 

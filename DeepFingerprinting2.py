@@ -12,16 +12,8 @@ class DeepFingerprintingNeuralNetwork:
 		optimization_function = keras.optimizers.Adamax(lr=0.002, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0)
 		kernel_initialization = keras.initializers.glorot_uniform(seed=0)
 
-		def identity_loss(y_true, y_pred):
-		    neg_y_true = 1 - y_true
-		    neg_y_pred = 1 - y_pred
-		    false_positive = keras.backend.sum(neg_y_true * y_pred)
-		    true_negative = keras.backend.sum(neg_y_true * neg_y_pred)
-		    specificity  = true_negative / (true_negative + false_positive + keras.backend.epsilon())
-		    return specificity
-
 		#Block layer 1
-		model.add(keras.layers.Conv1D(filters=32, kernel_size=kernel, input_shape=input, strides=conv_stride, padding='same', name='block1_convolutional_layer1'))
+		model.add(keras.layers.Conv1D(filters=4, kernel_size=kernel, input_shape=input, strides=conv_stride, padding='same', name='block1_convolutional_layer1'))
 		model.add(keras.layers.BatchNormalization(axis=-1))
 		model.add(keras.layers.ELU(alpha=1.0, name='block1_activation_layer1'))
 		model.add(keras.layers.Conv1D(filters=32, kernel_size=kernel, strides=conv_stride, padding='same', name='block1_convolutional_layer2'))
@@ -46,7 +38,7 @@ class DeepFingerprintingNeuralNetwork:
 		#Output prediction
 		model.add(keras.layers.core.Flatten(name='flatten'))
 		model.add(keras.layers.core.Dense(N, kernel_initializer=kernel_initialization, name='fully_connected_layer3')) #Where N is the number of pages we are testing for
-		model.add(keras.layers.core.Activation('softmax', name="softmax"))
+		model.add(keras.layers.core.Activation('sigmoid', name="sigmoid"))
 
-		model.compile(loss=identity_loss, optimizer=keras.optimizers.Adamax(lr=0.002, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0))
+		model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', keras.metrics.SensitivityAtSpecificity(0.5)])
 		return model
