@@ -86,13 +86,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 X_train = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_training-0.1.csv', index_col=0).to_numpy()
 y_train = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_training-0.1.csv', index_col=0)
 X_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_testing-0.1.csv', index_col=0).to_numpy() 
-y_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
+y_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
 
 scaler = StandardScaler()
 #X_train = scaler.fit_transform(X_train)
 #X_test = scaler.transform(X_valid)
 y_train = np_utils.to_categorical(y_train['PAGE_NUMBER'].to_numpy())
-y_valid = np_utils.to_categorical(y_valid['PAGE_NUMBER'].to_numpy())
+y_test = np_utils.to_categorical(y_test['PAGE_NUMBER'].to_numpy())
 
 
 rf = RandomForestClassifier(max_depth=2, n_estimators=10,random_state=42)
@@ -106,7 +106,7 @@ testing = pd.DataFrame(data = y_pred_rf).to_numpy()
 print(testing.argmax(axis=1))
 
 
-cm = multilabel_confusion_matrix(y_valid.argmax(axis=1), y_pred.argmax(axis=1))
+cm = multilabel_confusion_matrix(y_test.argmax(axis=1), y_pred.argmax(axis=1))
 print(cm)
 TN = cm[:, 0, 0]
 TP = cm[:, 0, 0]
@@ -121,10 +121,10 @@ print("*******************")
 print(FP / (FP + TN))
 print("*******************")
 
-y_valid = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
-labels = y_valid['PAGE_NUMBER'].unique()
-y_valid = np_utils.to_categorical(y_valid['PAGE_NUMBER'].to_numpy())
-y_true = y_valid.argmax(axis=1)
+y_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
+labels = y_test['PAGE_NUMBER'].unique()
+y_test = np_utils.to_categorical(y_test['PAGE_NUMBER'].to_numpy())
+y_true = y_test.argmax(axis=1)
 y_test = label_binarize(y_true, classes= labels)
 y_pred = label_binarize(y_pred.argmax(axis=1), classes=labels)
 auc_keras = roc_auc_score(y_test, y_pred, multi_class='ovo')
