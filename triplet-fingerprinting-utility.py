@@ -15,7 +15,7 @@ import multiprocessing as mp
 
 from sklearn.metrics import multilabel_confusion_matrix
 
-rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/twitter/0.09_data'
+rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/instagram/0.09_data'
 
 
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
@@ -262,12 +262,26 @@ class TripletGenerator():
 description = 'Triplet_Model'
 training_csv_log = keras.callbacks.CSVLogger('log/Train_Log_%s.csv'%description, append=True, separator=';')
 gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, None)
-epochs = 10
-for i in range(epochs):
-    model_triplet.fit(gen_hard.next_train(), steps_per_epoch=30, epochs=1, verbose=1)
+epochs = 30
+history = model_triplet.fit(gen_hard.next_train(), steps_per_epoch=30, epochs=1, verbose=1)
+epochs_count = []
+loss = []
+for i in range(epochs - 1):
+    history = model_triplet.fit(gen_hard.next_train(), steps_per_epoch=30, epochs=1, verbose=1)
+    epochs_count += [i,]
+    loss += [history.history['loss'],]
     gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, convolutional_neural_network)
 
 
+
+#summary of history for loss   
+plt.plot(loss)
+plt.plot(epochs_count)
+plt.title('model loss')
+plt.ylabel('loss')
+plt.ylabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
 
 
 #Testing set

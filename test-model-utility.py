@@ -98,34 +98,26 @@ y_test = np_utils.to_categorical(y_test['PAGE_NUMBER'].to_numpy())
 #DeepFingerprinting Steps
 model = DeepFingerprintingNeuralNetwork.neuralnetwork(input=INPUT_SHAPE, N=NUMBER_OF_PAGES)
 #tuner_search=RandomSearch(model, objective='val_accuracy', max_trials=5, directory='./output', project_name='deep_fingerprinting')
-#summary of history of accuracy
-history = model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=30, verbose=1, validation_data=(X_test, y_test))
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.ylabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.show()
+model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=1, verbose=1)
 
-#summary of history for loss   
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.ylabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.show()
 
 pre_cla = model.predict(X_test, verbose=1, batch_size=100)
+
+accuracy = model.evaluate(X_test, y_test, verbose=1)
+
+pred = np.argmax(pre_cla, axis=1)[:]
+label = np.argmax(y_test, axis=1)[:]
+print(accuracy)
+for i in range(len(pred)):
+    print(pred[i], label[i])
 
 cm = multilabel_confusion_matrix(y_test.argmax(axis=1), pre_cla.argmax(axis=1))
 print(cm)
 
 TN = cm[:, 0, 0]
-TP = cm[:, 0, 0]
+TP = cm[:, 1, 1]
 FN = cm[:, 1, 0]
-FP = cm[:, 1, 0]
+FP = cm[:, 0, 1]
 print("True Positive Rates")
 print("*******************")
 print(TP / (TP + FN))
@@ -146,40 +138,40 @@ print("AUC Score")
 print("*******************")
 print(auc_keras)
 
-#print("Plot the Micro Average of ROC of all classes")
-#print("*******************")
+print("Plot the Micro Average of ROC of all classes")
+print("*******************")
 
-#FPR, TPR, threshold_keras = roc_curve(y_test.ravel(), y_pred.ravel())
+FPR, TPR, threshold_keras = roc_curve(y_test.ravel(), y_pred.ravel())
 
-#plt.figure()
-#plt.plot(FPR, TPR, label='Micro average ROC curve')
+plt.figure()
+plt.plot(FPR, TPR, label='Micro average ROC curve')
 
-#all_fpr = []
-#for i in range(0,100):
-#    try:
-#        all_fpr += [FPR[i],]
-#        FPR[i]
-#    except Exception:
-#        continue
-#all_fpr = np.unique(all_fpr)
-#mean_tpr = np.zeros_like(all_fpr)
-#for i in range(0,100):
-#    try:
-#        mean_tpr += interp(all_fpr, FPR[i], TPR[i])
-#    except Exception:
-#        continue
+all_fpr = []
+for i in range(0,100):
+    try:
+        all_fpr += [FPR[i],]
+        FPR[i]
+    except Exception:
+        continue
+all_fpr = np.unique(all_fpr)
+mean_tpr = np.zeros_like(all_fpr)
+for i in range(0,100):
+    try:
+        mean_tpr += interp(all_fpr, FPR[i], TPR[i])
+    except Exception:
+        continue
  
-#auc_curve = auc(FPR, TPR)
+auc_curve = auc(FPR, TPR)
 
-#print("Plot the Macro Average of ROC of all classes")
-#print("*******************")
+print("Plot the Macro Average of ROC of all classes")
+print("*******************")
 
-#plt.figure()
-#plt.plot(FPR, TPR, label='Macro Average Curve')
-#plt.show()
+plt.figure()
+plt.plot(FPR, TPR, label='Macro Average Curve')
+plt.show()
 
 
-#gc.collect()
+gc.collect()
 
 
 
