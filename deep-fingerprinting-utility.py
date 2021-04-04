@@ -69,9 +69,9 @@ for subdir, dirs, files in os.walk(rootdir):
                     testing.append(tf)
             final_training = pd.concat(training,axis=0,ignore_index=True)[:-1]
             final_testing = pd.concat(testing,axis=0,ignore_index=True)[:-1]
-            final_training[['TIME','SRC','PACKET_SIZE','CUMULATIVE_PACKET_SIZE','TOTAL_PACKET_SIZE']].to_csv("X_training"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
+            final_training[['SRC','CUMULATIVE_PACKET_SIZE','TOTAL_PACKET_SIZE']].to_csv("X_training"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
             final_training['PAGE_NUMBER'].to_csv("Y_training"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
-            final_testing[['TIME','SRC','PACKET_SIZE','CUMULATIVE_PACKET_SIZE','TOTAL_PACKET_SIZE']].to_csv("X_testing"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
+            final_testing[['SRC','CUMULATIVE_PACKET_SIZE','TOTAL_PACKET_SIZE']].to_csv("X_testing"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
             final_testing['PAGE_NUMBER'].to_csv("Y_testing"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
 
 
@@ -88,7 +88,7 @@ y_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_
 # we need a [Length x 1] x n shape as input to the DFNet (Tensorflow)
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
-INPUT_SHAPE = (5,1)
+INPUT_SHAPE = (3,1)
 
 NUMBER_OF_PAGES=101
 #NUMBER_OF_PAGES=97

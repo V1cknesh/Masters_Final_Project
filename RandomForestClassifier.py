@@ -23,8 +23,13 @@ from sklearn.preprocessing import label_binarize
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import multilabel_confusion_matrix
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.preprocessing import label_binarize
+from keras.preprocessing.text import hashing_trick
+import hashlib
+from sklearn.model_selection import train_test_split
 
-threshold="0.09"
+threshold="0.05"
+threshold3=0.05
 social_media_site="fb"
 
 
@@ -40,8 +45,7 @@ testing = []
 count = 0
 for subdir, dirs, files in os.walk(rootdir):
     if (subdir.split("_")[-1] == "data"):
-        threshold=subdir.split("/")[-1].split("_")[0] 
-        print(threshold)
+        threshold=subdir.split("/")[-1].split("_")[0]
         for subdirs, dirs, files in os.walk(subdir):
             for file in files:
                 filename = subdir + "/" + file
@@ -51,12 +55,17 @@ for subdir, dirs, files in os.walk(rootdir):
                     lower_quartile = int(0.15 * length_of_data)
                     upper_quartile = int(0.85 * length_of_data)
                     df.drop_duplicates(inplace=True)
-                    df = df[0: len(df.index): 1]
+                    #df = df[0: len(df.index): 1]
                     df['PACKET_SIZE'] = pd.to_numeric(df['PACKET_SIZE'], errors='coerce').astype('float32')
                     df['TOTAL_PACKET_SIZE'] = pd.to_numeric(df['TOTAL_PACKET_SIZE'], errors='coerce').astype('float32')
                     df['CUMULATIVE_PACKET_SIZE'] = pd.to_numeric(df['CUMULATIVE_PACKET_SIZE'], errors='coerce').astype('float32')
                     df['TIME'] = pd.to_numeric(df['TIME'], errors='coerce').astype('float32')
                     df['SRC'] = pd.to_numeric(df['SRC'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
+                    df['PACKET_SIZE'] = df['PACKET_SIZE'].div(df['PACKET_SIZE'].sum(), axis=0)
+                    df['TOTAL_PACKET_SIZE'] = df['TOTAL_PACKET_SIZE'].div(df['TOTAL_PACKET_SIZE'].sum(), axis=0)
+                    df['CUMULATIVE_PACKET_SIZE'] = df['CUMULATIVE_PACKET_SIZE'].div(df['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
+                    #df['TIME'] = df['TIME'].div(df['TIME'].sum(), axis=0)
+                    df['SRC'] = df['SRC'].replace(-1, 0)
                     training.append(df)
                 else:
                     tf = pd.read_csv(filename, index_col=0)[1:]
@@ -64,38 +73,85 @@ for subdir, dirs, files in os.walk(rootdir):
                     lower_quartile = int(0.15 * length_of_data)
                     upper_quartile = int(0.85 * length_of_data)
                     tf.drop_duplicates(inplace=True)
-                    tf = tf[0: len(tf.index): 1]
+                    #tf = tf[0: len(tf.index): 1]
                     tf['PACKET_SIZE'] = pd.to_numeric(tf['PACKET_SIZE'], errors='coerce').astype('float32')
                     tf['TOTAL_PACKET_SIZE'] = pd.to_numeric(tf['TOTAL_PACKET_SIZE'], errors='coerce').astype('float32')
                     tf['CUMULATIVE_PACKET_SIZE'] = pd.to_numeric(tf['CUMULATIVE_PACKET_SIZE'], errors='coerce').astype('float32')
                     tf['TIME'] = pd.to_numeric(tf['TIME'], errors='coerce').astype('float32')
                     tf['SRC'] = pd.to_numeric(tf['SRC'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
-                    testing.append(tf)
+                    tf['PACKET_SIZE'] = tf['PACKET_SIZE'].div(tf['PACKET_SIZE'].sum(), axis=0)
+                    tf['TOTAL_PACKET_SIZE'] = tf['TOTAL_PACKET_SIZE'].div(tf['TOTAL_PACKET_SIZE'].sum(), axis=0)
+                    tf['CUMULATIVE_PACKET_SIZE'] = tf['CUMULATIVE_PACKET_SIZE'].div(tf['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
+                    #tf['TIME'] = tf['TIME'].div(tf['TIME'].sum(), axis=0)
+                    tf['SRC'] = tf['SRC'].replace(-1, 0)
+                    training.append(tf)
+
             final_training = pd.concat(training,axis=0,ignore_index=True)[:-1]
-            final_testing = pd.concat(testing,axis=0,ignore_index=True)[:-1]
-            final_training[['TIME','SRC','PACKET_SIZE','CUMULATIVE_PACKET_SIZE','TOTAL_PACKET_SIZE']].to_csv("X_training"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
-            final_training['PAGE_NUMBER'].to_csv("Y_training"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
-            final_testing[['TIME','SRC','PACKET_SIZE','CUMULATIVE_PACKET_SIZE','TOTAL_PACKET_SIZE']].to_csv("X_testing"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
-            final_testing['PAGE_NUMBER'].to_csv("Y_testing"+"-"+str(threshold)+".csv", sep=",", encoding='utf-8')
 
+            length_of_source_address = 0
+            F = []
+            k = 1
+            B = []
+            SOURCE_ADDRESS = []
+            cumulative_packet_list = []
+            time = 0
+            initial_time = final_training['TIME'].iloc[0]
+            group_packet_size = 0
+            page_number = -1
+            for index, row in final_training.iterrows():
+                if (row[0] - initial_time < 0.005):
+                    group_packet_size += row[2]
+                    cumulative_packet_list += [group_packet_size,]
+                    time += row[0]
+                    page_number = row[4]
+                    SOURCE_ADDRESS += [row[1],]
+                else:
+                    try:
+                        cumulative_packets = bin(int(''.join(map(str, cumulative_packet_list)).replace('.','')))[2:]
+                    except Exception:
+                        cumulative_packets = bin(0)
+                    if length_of_source_address == 0:
+                        length_of_source_address = len(SOURCE_ADDRESS)
+                    else:
+                        if len(SOURCE_ADDRESS) < length_of_source_address:
+                            SOURCE_ADDRESS = SOURCE_ADDRESS + [1,0] * (length_of_source_address)
 
+                    test = [time,] +  SOURCE_ADDRESS[:length_of_source_address] + [group_packet_size, page_number]
+                    F.append(test)
+                    group_packet_size = 0
+                    SOURCE_ADDRESS = []
+                    cumulative_packet_list = []
+                    time = 0
+                    k += 1
+
+            final_training = pd.DataFrame(F)
+
+X = final_training[final_training.columns[:60]] 
+Y = final_training[final_training.columns[-1]]
 
 random.seed(0)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-X_train = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_training-0.1.csv', index_col=0).to_numpy()
-y_train = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_training-0.1.csv', index_col=0)
-X_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/X_testing-0.1.csv', index_col=0).to_numpy() 
-y_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.2, random_state =1)
 
-scaler = StandardScaler()
-#X_train = scaler.fit_transform(X_train)
-#X_test = scaler.transform(X_valid)
-y_train = np_utils.to_categorical(y_train['PAGE_NUMBER'].to_numpy())
-y_test = np_utils.to_categorical(y_test['PAGE_NUMBER'].to_numpy())
+X_train = X_train.to_numpy().astype("float32")
+X_test = X_test.to_numpy().astype("float32")
 
 
-rf = RandomForestClassifier(max_depth=2, n_estimators=10,random_state=42)
+print(X_train.shape)
+print(X_test.shape)
+print(y_train.shape)
+print(y_test.shape)
+
+#X_train = X_train[:, :,np.newaxis]
+#X_test = X_test[:, :,np.newaxis]
+INPUT_SHAPE = (60,1)
+NUMBER_OF_PAGES=101
+y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
+y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
+
+
+rf = RandomForestClassifier(max_depth=5, n_estimators=10,random_state=42)
 rf = MultiOutputClassifier(rf, n_jobs=1)
 rf.fit(X_train, y_train)
 y_pred = rf.predict(X_test)
@@ -125,52 +181,15 @@ y_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_
 labels = y_test['PAGE_NUMBER'].unique()
 y_test = np_utils.to_categorical(y_test['PAGE_NUMBER'].to_numpy())
 y_true = y_test.argmax(axis=1)
+
+print(y_true)
+print(y_pred.argmax(axis=1))
 y_test = label_binarize(y_true, classes= labels)
 y_pred = label_binarize(y_pred.argmax(axis=1), classes=labels)
-auc_keras = roc_auc_score(y_test, y_pred, multi_class='ovo')
+auc_keras = roc_auc_score(y_test.argmax(axis=1), y_pred.argmax(axis=1), multi_class='ovo')
 print("AUC Score")
 print("*******************")
 print(auc_keras)
-
-#print("Plot the Micro Average of ROC of all classes")
-#print("*******************")
-
-
-#FPR, TPR, threshold_keras = roc_curve(y_test.ravel(), y_pred.ravel())
-
-#plt.figure()
-#plt.plot(FPR, TPR, label='Micro average ROC curve')
-
-#all_fpr = []
-#for i in range(0,100):
-#    try:
-#        all_fpr += [FPR[i],]
-#        FPR[i]
-#    except Exception:
-#        continue
-#all_fpr = np.unique(all_fpr)
-#mean_tpr = np.zeros_like(all_fpr)
-#for i in range(0,100):
-#    try:
-#        mean_tpr += interp(all_fpr, FPR[i], TPR[i])
-#    except Exception:
-#        continue
- 
-#auc_curve = auc(FPR, TPR)
-
-#print("Plot the Macro Average of ROC of all classes")
-#print("*******************")
-
-#plt.figure()
-#plt.plot(FPR, TPR, label='Macro Average Curve')
-#plt.show()
-
-
-#gc.collect()
-
-
-#plt.figure()
-#plt.plot(FPR, TPR, label='Micro average ROC curve')
 
 
 
