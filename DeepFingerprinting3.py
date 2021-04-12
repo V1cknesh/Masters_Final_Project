@@ -17,13 +17,28 @@ class DeepFingerprintingNeuralNetwork:
 
 		#Block layer 1
 		model.add(keras.layers.Conv1D(filters=4, kernel_size=kernel, input_shape=input, strides=conv_stride,activation='relu', padding='same', name='block1_convolutional_layer1'))
-		model.add(keras.layers.BatchNormalization(axis=-1))
-		model.add(keras.layers.ELU(alpha=1.0, name='block1_activation_layer1'))
 		model.add(keras.layers.Conv1D(filters=32, kernel_size=kernel, strides=conv_stride, padding='same',activation='relu', name='block1_convolutional_layer2'))
-		model.add(keras.layers.BatchNormalization(axis=-1))
-		model.add(keras.layers.ELU(alpha=1.0, name='block1_activation_layer2'))
 		model.add(keras.layers.MaxPooling1D(pool_size=pool, strides=pool_stride, padding='same', name='block1_pooling_layer'))
 		model.add(keras.layers.core.Dropout(0.5, name='block1_dropout_layer'))
+
+
+		#@model.add(keras.layers.Dense(256, activation='relu'))
+		#model.add(keras.layers.core.Activation('softmax', name="softmax"))
+		#model.add(keras.layers.Dense(128, activation='relu'))
+		#model.add(keras.layers.core.Activation('softmax', name="softmax"))
+		#model.add(keras.layers.Dense(64, activation='relu'))
+		#model.add(keras.layers.core.Activation('softmax', name="softmax"))
+		#model.add(keras.layers.core.Dense(N, kernel_initializer=kernel_initialization, name='fully_connected_layer3')) #Where N is the number of pages we are testing for
+		#model.add(keras.layers.core.Activation('softmax', name="softmax"))
+
+
+		#model.add(keras.layers.BatchNormalization(axis=-1))
+		#model.add(keras.layers.ELU(alpha=1.0, name='block1_activation_layer1'))
+		#model.add(keras.layers.Conv1D(filters=32, kernel_size=kernel, strides=conv_stride, padding='same',activation='relu', name='block1_convolutional_layer2'))
+		#model.add(keras.layers.BatchNormalization(axis=-1))
+		#model.add(keras.layers.ELU(alpha=1.0, name='block1_activation_layer2'))
+		#model.add(keras.layers.MaxPooling1D(pool_size=pool, strides=pool_stride, padding='same', name='block1_pooling_layer'))
+		#model.add(keras.layers.core.Dropout(0.5, name='block1_dropout_layer'))
 
 		#Block layers 2,3,4 connected layers
 		for layer in range(1, no_of_internal_layers + 1):
@@ -39,10 +54,8 @@ class DeepFingerprintingNeuralNetwork:
 			model.add(keras.layers.MaxPooling1D(pool_size=pool, strides=pool_stride, padding='same')) #Max Pooling
 			model.add(keras.layers.core.Dropout(0.5, name="block2"+str(layer)+"_dropout")) #Block Dropout layer
 
-		#Out3put prediction
 		model.add(keras.layers.core.Flatten(name='flatten'))
 		model.add(keras.layers.core.Dense(N, kernel_initializer=kernel_initialization, name='fully_connected_layer3')) #Where N is the number of pages we are testing for
 		model.add(keras.layers.core.Activation('softmax', name="softmax"))
-
-		model.compile(loss='categorical_crossentropy', optimizer=optimization_function2 , metrics=[ 'accuracy', keras.metrics.TopKCategoricalAccuracy(),keras.metrics.CategoricalAccuracy(), keras.metrics.SensitivityAtSpecificity(0.5)])
+		model.compile(loss='categorical_crossentropy', optimizer=optimization_function2 , metrics=[ keras.metrics.TopKCategoricalAccuracy(),keras.metrics.CategoricalAccuracy(), keras.metrics.SensitivityAtSpecificity(0.5)])
 		return model

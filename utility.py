@@ -29,7 +29,7 @@ threshold3=0.05
 social_media_site="fb"
 alpha_value=0.05
 
-rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/instagram/0.1_data'
+rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/fb/0.1_data'
 
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
 
@@ -68,8 +68,8 @@ for subdir, dirs, files in os.walk(rootdir):
                     df['TIME'] = pd.to_numeric(df['TIME'], errors='coerce').astype('float32')
                     df['SRC'] = pd.to_numeric(df['SRC'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
                     df['PACKET_SIZE'] = df['PACKET_SIZE'].div(df['PACKET_SIZE'].sum(), axis=0)
-                    df['TOTAL_PACKET_SIZE'] = df['TOTAL_PACKET_SIZE'].div(df['TOTAL_PACKET_SIZE'].sum(), axis=0)
-                    df['CUMULATIVE_PACKET_SIZE'] = df['CUMULATIVE_PACKET_SIZE'].div(df['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
+                    #df['TOTAL_PACKET_SIZE'] = df['TOTAL_PACKET_SIZE'].div(df['TOTAL_PACKET_SIZE'].sum(), axis=0)
+                    #df['CUMULATIVE_PACKET_SIZE'] = df['CUMULATIVE_PACKET_SIZE'].div(df['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
                     #df['TIME'] = df['TIME'].div(df['TIME'].sum(), axis=0)
                     df['SRC'] = df['SRC'].replace(-1, 0)
                     training.append(df)
@@ -86,8 +86,8 @@ for subdir, dirs, files in os.walk(rootdir):
                     tf['TIME'] = pd.to_numeric(tf['TIME'], errors='coerce').astype('float32')
                     tf['SRC'] = pd.to_numeric(tf['SRC'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
                     tf['PACKET_SIZE'] = tf['PACKET_SIZE'].div(tf['PACKET_SIZE'].sum(), axis=0)
-                    tf['TOTAL_PACKET_SIZE'] = tf['TOTAL_PACKET_SIZE'].div(tf['TOTAL_PACKET_SIZE'].sum(), axis=0)
-                    tf['CUMULATIVE_PACKET_SIZE'] = tf['CUMULATIVE_PACKET_SIZE'].div(tf['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
+                    #tf['TOTAL_PACKET_SIZE'] = tf['TOTAL_PACKET_SIZE'].div(tf['TOTAL_PACKET_SIZE'].sum(), axis=0)
+                    #tf['CUMULATIVE_PACKET_SIZE'] = tf['CUMULATIVE_PACKET_SIZE'].div(tf['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
                     #tf['TIME'] = tf['TIME'].div(tf['TIME'].sum(), axis=0)
                     tf['SRC'] = tf['SRC'].replace(-1, 0)
                     training.append(tf)
@@ -99,6 +99,7 @@ for subdir, dirs, files in os.walk(rootdir):
             k = 1
             B = []
             SOURCE_ADDRESS = ""
+            SOURCE_ADDRESS2 = []
             cumulative_packet_list = []
             time = 0
             initial_time = final_training['TIME'].iloc[0]
@@ -112,6 +113,7 @@ for subdir, dirs, files in os.walk(rootdir):
                     time += row[0]
                     page_number = row[4]
                     SOURCE_ADDRESS += str(row[1])
+                    SOURCE_ADDRESS2 += [row[1],]
                 else:
                     try:
                         cumulative_packets = str(bin(int.from_bytes(encoding(cumulative_packets2), "little"))[2:])
@@ -122,9 +124,22 @@ for subdir, dirs, files in os.walk(rootdir):
                                 continue
                             else:
                                 SOURCE_ADDRESS = str(bin(int.from_bytes(encoding(str(SOURCE_ADDRESS.replace(".", ""))), "little"))[2:])
-                                combined = cumulative_packets + SOURCE_ADDRESS
-                                reducer = [i for i in combined][0:58]
-                                test = [time,] + reducer + [group_packet_size, page_number]
+                                if len(cumulative_packet_list) < 10:
+                                    cumulative_packet_list += [0] * (10 - len(cumulative_packet_list))
+                                elif len(cumulative_packet_list) > 10:
+                                    cumulative_packet_list = cumulative_packet_list[0:10]
+                                if len(SOURCE_ADDRESS) < 146:
+                                    SOURCE_ADDRESS += [0] * (146 - len(SOURCE_ADDRESS))
+                                elif len(SOURCE_ADDRESS) > 146:
+                                    SOURCE_ADDRESS = SOURCE_ADDRESS[0:146]
+                                if len(SOURCE_ADDRESS2) < 148:
+                                    SOURCE_ADDRESS2 += [0] * (148 - len(SOURCE_ADDRESS2))
+                                elif len(SOURCE_ADDRESS2) > 148:
+                                    SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:148]
+                                #SOURCE_ADDRESS2 = str(SOURCE_ADDRESS).replace("", ".").split(".")
+                                #SA = np.frombuffer(SOURCE_ADDRESS, dtype=float, sep='')
+                                #print(SA)
+                                test = [time,group_packet_size] + cumulative_packet_list + SOURCE_ADDRESS2 + [page_number,]
                                 F.append(test)
                                 group_packet_size = 0
                                 SOURCE_ADDRESS = ""
@@ -138,7 +153,7 @@ for subdir, dirs, files in os.walk(rootdir):
             final_training = pd.DataFrame(F)
             print(final_training)
 
-X = final_training[final_training.columns[:60]] 
+X = final_training[final_training.columns[:-1]]
 Y = final_training[final_training.columns[-1]]
 
 
@@ -157,7 +172,7 @@ print(y_test.shape)
 
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
-INPUT_SHAPE = (60,1)
+INPUT_SHAPE = (160,1)
 NUMBER_OF_PAGES=101
 y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
 y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
@@ -167,8 +182,8 @@ y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 
 model = DeepFingerprintingNeuralNetwork.neuralnetwork(input=INPUT_SHAPE, N=NUMBER_OF_PAGES)
 model.summary()
-history = model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=300, verbose=1, validation_data=(X_test, y_test))
-print(historty.history)
+history = model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=30, verbose=1, validation_data=(X_test, y_test))
+print(history.history)
 plt.plot(history.history['categorical_accuracy'])
 plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
@@ -186,17 +201,16 @@ plt.ylabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
 
-pre_cla = model.predict(X_test, verbose=1, batch_size=100)
+y_pred = model.predict(X_test, verbose=1, batch_size=100)
 print(y_test)
-print(pre_cla)
+print(y_pred)
 
-cm = multilabel_confusion_matrix(y_test.argmax(axis=1), pre_cla.argmax(axis=1))
-
+cm = multilabel_confusion_matrix(y_test.argmax(axis=1), y_pred.argmax(axis=1))
 
 TN = cm[:, 0, 0]
-TP = cm[:, 0, 0]
+TP = cm[:, 1, 1]
 FN = cm[:, 1, 0]
-FP = cm[:, 1, 0]
+FP = cm[:, 0, 1]
 print("True Positive Rates")
 print("*******************")
 print(TP / (TP + FN))
@@ -210,9 +224,12 @@ y_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_
 labels = y_test['PAGE_NUMBER'].unique()
 y_test = np_utils.to_categorical(y_test['PAGE_NUMBER'].to_numpy())
 y_true = y_test.argmax(axis=1)
+
+print(y_true)
+print(y_pred.argmax(axis=1))
 y_test = label_binarize(y_true, classes= labels)
-y_pred = label_binarize(pre_cla.argmax(axis=1), classes=labels)
-auc_keras = roc_auc_score(y_test, y_pred, multi_class='ovo')
+y_pred = label_binarize(y_pred.argmax(axis=1), classes=labels)
+auc_keras = roc_auc_score(y_test.argmax(axis=1), y_pred.argmax(axis=1), multi_class='ovo')
 print("AUC Score")
 print("*******************")
 print(auc_keras)

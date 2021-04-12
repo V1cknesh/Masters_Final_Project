@@ -31,7 +31,7 @@ threshold3=0.05
 social_media_site="fb"
 alpha_value=0.05
 
-rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/instagram/0.1_data'
+rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/fb/0.1_data'
 
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
 
@@ -340,7 +340,7 @@ class TripletGenerator():
 description = 'Triplet_Model'
 training_csv_log = keras.callbacks.CSVLogger('log/Train_Log_%s.csv'%description, append=True, separator=';')
 gen_hard = TripletGenerator(anchor_train, positive_train, 30, new_triplet_set, all_traces_train_idx, None)
-epochs = 5
+epochs = 10
 history = model_triplet.fit(gen_hard.next_train(), steps_per_epoch=30, epochs=1, verbose=1)
 epochs_count = []
 loss = []
