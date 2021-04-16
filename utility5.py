@@ -98,7 +98,7 @@ group_packet_size = 0
 page_number = -1
 cumulative_packets2 = 0
 for index, row in final_training.iterrows():
-    if (row['TIME'] - initial_time < 0.005):
+    if (row['TIME'] - initial_time < 0):
         group_packet_size += row['PACKET_SIZE']
         cumulative_packet_list += [group_packet_size,]
         time += row['TIME']

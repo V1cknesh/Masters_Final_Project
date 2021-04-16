@@ -31,7 +31,7 @@ threshold3=0.05
 social_media_site="fb"
 alpha_value=0.05
 
-rootdir = '/home/student/MachineLearningTest/TestDirectory/AWS_zip/ins/original_proc'
+rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/TestDirectory/AWS_zip/fb/original_proc/'
 
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
 
@@ -50,13 +50,13 @@ def encoding(bin_string):
 
 training = []
 testing = []
-final_training = pd.read_csv('/home/student/MachineLearningTest/TestDirectory/AWS_zip/fb/original_proc/25/497.csv')
+final_training = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/TestDirectory/AWS_zip/fb/original_proc/25/497.csv')
 count = 0
 for subdir, dirs, files in os.walk(rootdir):
     for subdirs, dirs, files in os.walk(subdir):
         for file in files:
             count += 1
-            if count <= 20:
+            if count <= 40:
                 page_number = subdirs.split("/")[-1]
                 filename = subdirs + "/" + file
                 df = pd.read_csv(filename, names=['TIME', 'SRC', 'DEST', 'PACKET_SIZE'])
@@ -74,7 +74,8 @@ for subdir, dirs, files in os.walk(rootdir):
                 break
 
 
-final_training = pd.concat(training,axis=0,ignore_index=True).head(1000000)
+final_training = pd.concat(training,axis=0,ignore_index=True).head(500000)
+#print(final_training)
 plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
 plt.show()
 #plt.scatter(final_training[['TIME']], final_training['PAGE_NUMBER'])
@@ -97,16 +98,18 @@ initial_time = final_training['TIME'].iloc[0]
 group_packet_size = 0
 page_number = -1
 cumulative_packets2 = 0
+count = 0
 for index, row in final_training.iterrows():
-    if (row['TIME'] - initial_time < 0.005):
+    count += 1
+    if (count <= 100):
         group_packet_size += row['PACKET_SIZE']
-        cumulative_packet_list += [group_packet_size,]
+        cumulative_packet_list += [group_packet_size,] 
         time += row['TIME']
         page_number = row['PAGE_NUMBER']
         SOURCE_ADDRESS2 += [row['SRC'],]
         DEST_ADDRESS2 += [row['DEST'],]
         initial_time = row['TIME']
-    elif (row['TIME'] - initial_time > 0.001):
+    elif (count > 100):
         try:
             if len(cumulative_packet_list) < 50:
                 cumulative_packet_list += [0] * (50 - len(cumulative_packet_list))
@@ -128,13 +131,14 @@ for index, row in final_training.iterrows():
             cumulative_packet_list = []
             time = 0
             initial_time = row['TIME']
+            count = 0
         except Exception:
             continue
         
 
 final_training = pd.DataFrame(F)
 final_training.drop_duplicates(inplace=True)
-#print(final_training)
+print(final_training)
 
 X = final_training[final_training.columns[:-1]]
 Y = final_training[final_training.columns[-1]]
@@ -159,7 +163,7 @@ print(y_test.shape)
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
 INPUT_SHAPE = (52,1)
-NUMBER_OF_PAGES=101
+NUMBER_OF_PAGES=98
 y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
 y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 
@@ -210,6 +214,7 @@ print("*******************")
 
 y_test = y_test
 labels = y_test['PAGE_NUMBER'].unique()
+print(labels)
 y_test = np_utils.to_categorical(y_test['PAGE_NUMBER'].to_numpy())
 y_true = y_test.argmax(axis=1)
 

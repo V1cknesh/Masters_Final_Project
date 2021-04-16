@@ -170,7 +170,6 @@ model = DeepFingerprintingNeuralNetwork.neuralnetwork(input=INPUT_SHAPE, N=NUMBE
 model.summary()
 history = model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=60, verbose=1, validation_data=(X_test, y_test))
 
-
 print(history.history)
 plt.plot(history.history['categorical_accuracy'])
 plt.plot(history.history['val_categorical_accuracy'])

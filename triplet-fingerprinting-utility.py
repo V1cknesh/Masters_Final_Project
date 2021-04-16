@@ -31,14 +31,14 @@ threshold3=0.05
 social_media_site="fb"
 alpha_value=0.05
 
-rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/dataset/fb/0.1_data'
+rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/TestDirectory/AWS_zip/fb/original_proc/'
 
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
 
 charset = 'abcdefghijklmnopqrstuvwxyz1234567890'
 
 def ipaddressconverter(ipaddress): 
-    return 1 if '.'.join(ipaddress.split('.')[0:-1]) in SOURCE_IPADDRESS  else -1;
+    return 1 if '.'.join(ipaddress.split('.')[0:-1]) in SOURCE_IPADDRESS  else 0;
 
 def encoding(bin_string):
     bin_string = str(bin_string)
@@ -50,98 +50,102 @@ def encoding(bin_string):
 
 training = []
 testing = []
+final_training = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/TestDirectory/AWS_zip/fb/original_proc/25/497.csv')
 count = 0
 for subdir, dirs, files in os.walk(rootdir):
-    if (subdir.split("_")[-1] == "data"):
-        threshold=subdir.split("/")[-1].split("_")[0]
-        for subdirs, dirs, files in os.walk(subdir):
-            for file in files:
-                filename = subdir + "/" + file
-                if file.split("_")[0] == "training":
-                    df = pd.read_csv(filename, index_col=0)[1:]
-                    length_of_data = len(df.index)
-                    lower_quartile = int(0.15 * length_of_data)
-                    upper_quartile = int(0.85 * length_of_data)
-                    df.drop_duplicates(inplace=True)
-                    #df = df[0: len(df.index): 1]
-                    df['PACKET_SIZE'] = pd.to_numeric(df['PACKET_SIZE'], errors='coerce').astype('float32')
-                    df['TOTAL_PACKET_SIZE'] = pd.to_numeric(df['TOTAL_PACKET_SIZE'], errors='coerce').astype('float32')
-                    df['CUMULATIVE_PACKET_SIZE'] = pd.to_numeric(df['CUMULATIVE_PACKET_SIZE'], errors='coerce').astype('float32')
-                    df['TIME'] = pd.to_numeric(df['TIME'], errors='coerce').astype('float32')
-                    df['SRC'] = pd.to_numeric(df['SRC'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
-                    df['PACKET_SIZE'] = df['PACKET_SIZE'].div(df['PACKET_SIZE'].sum(), axis=0)
-                    df['TOTAL_PACKET_SIZE'] = df['TOTAL_PACKET_SIZE'].div(df['TOTAL_PACKET_SIZE'].sum(), axis=0)
-                    df['CUMULATIVE_PACKET_SIZE'] = df['CUMULATIVE_PACKET_SIZE'].div(df['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
-                    #df['TIME'] = df['TIME'].div(df['TIME'].sum(), axis=0)
-                    df['SRC'] = df['SRC'].replace(-1, 0)
-                    training.append(df)
-                else:
-                    tf = pd.read_csv(filename, index_col=0)[1:]
-                    length_of_data = len(tf.index)
-                    lower_quartile = int(0.15 * length_of_data)
-                    upper_quartile = int(0.85 * length_of_data)
-                    tf.drop_duplicates(inplace=True)
-                    #tf = tf[0: len(tf.index): 1]
-                    tf['PACKET_SIZE'] = pd.to_numeric(tf['PACKET_SIZE'], errors='coerce').astype('float32')
-                    tf['TOTAL_PACKET_SIZE'] = pd.to_numeric(tf['TOTAL_PACKET_SIZE'], errors='coerce').astype('float32')
-                    tf['CUMULATIVE_PACKET_SIZE'] = pd.to_numeric(tf['CUMULATIVE_PACKET_SIZE'], errors='coerce').astype('float32')
-                    tf['TIME'] = pd.to_numeric(tf['TIME'], errors='coerce').astype('float32')
-                    tf['SRC'] = pd.to_numeric(tf['SRC'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
-                    tf['PACKET_SIZE'] = tf['PACKET_SIZE'].div(tf['PACKET_SIZE'].sum(), axis=0)
-                    tf['TOTAL_PACKET_SIZE'] = tf['TOTAL_PACKET_SIZE'].div(tf['TOTAL_PACKET_SIZE'].sum(), axis=0)
-                    tf['CUMULATIVE_PACKET_SIZE'] = tf['CUMULATIVE_PACKET_SIZE'].div(tf['CUMULATIVE_PACKET_SIZE'].sum(), axis=0)
-                    #tf['TIME'] = tf['TIME'].div(tf['TIME'].sum(), axis=0)
-                    tf['SRC'] = tf['SRC'].replace(-1, 0)
-                    training.append(tf)
+    for subdirs, dirs, files in os.walk(subdir):
+        for file in files:
+            count += 1
+            if count <= 40:
+                page_number = subdirs.split("/")[-1]
+                filename = subdirs + "/" + file
+                df = pd.read_csv(filename, names=['TIME', 'SRC', 'DEST', 'PACKET_SIZE'])
+                length_of_data = len(df.index)
+                lower_quartile = int(0.15 * length_of_data)
+                upper_quartile = int(0.85 * length_of_data)
+                df.drop_duplicates(inplace=True)
+                df = df[0: len(df.index): 1]
+                df['SRC'] = pd.to_numeric(df['SRC'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
+                df['DEST'] = pd.to_numeric(df['DEST'].transform(func=lambda x: ipaddressconverter(x)), errors='coerce').astype('float32')
+                df['PAGE_NUMBER'] = page_number
+                training.append(df)
+            else:
+                count = 0
+                break
 
-            final_training = pd.concat(training,axis=0,ignore_index=True)[:-1]
 
-            length_of_source_address = 0
-            F = []
-            k = 1
-            B = []
-            SOURCE_ADDRESS = ""
+final_training = pd.concat(training,axis=0,ignore_index=True).head(250000)
+#print(final_training)
+plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
+plt.show()
+#plt.scatter(final_training[['TIME']], final_training['PAGE_NUMBER'])
+#plt.show()
+#plt.scatter(final_training[['SRC']], final_training['PAGE_NUMBER'])
+#plt.show()
+#plt.scatter(final_training[['DEST']], final_training['PAGE_NUMBER'])
+#plt.show()
+#print(final_training)
+
+length_of_source_address = 0
+F = []
+k = 1
+B = []
+SOURCE_ADDRESS2 = []
+DEST_ADDRESS2 = []
+cumulative_packet_list = []
+time = 0
+initial_time = final_training['TIME'].iloc[0]
+group_packet_size = 0
+page_number = -1
+cumulative_packets2 = 0
+count = 0
+for index, row in final_training.iterrows():
+    count += 1
+    if (count <= 100):
+        group_packet_size += row['PACKET_SIZE']
+        cumulative_packet_list += [group_packet_size,] 
+        time += row['TIME']
+        page_number = row['PAGE_NUMBER']
+        SOURCE_ADDRESS2 += [row['SRC'],]
+        DEST_ADDRESS2 += [row['DEST'],]
+        initial_time = row['TIME']
+    elif (count > 100):
+        try:
+            if len(cumulative_packet_list) < 50:
+                cumulative_packet_list += [0] * (50 - len(cumulative_packet_list))
+            elif len(cumulative_packet_list) > 50:
+                cumulative_packet_list = cumulative_packet_list[0:50]
+            if len(SOURCE_ADDRESS2) < 50:
+                SOURCE_ADDRESS2 += [0] * (50 - len(SOURCE_ADDRESS2))
+            elif len(SOURCE_ADDRESS2) > 50:
+                SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:50]
+            if len(DEST_ADDRESS2) < 50:
+                DEST_ADDRESS2 += [0] * (50 - len(DEST_ADDRESS2))
+            elif len(DEST_ADDRESS2) > 50:
+                DEST_ADDRESS2 = DEST_ADDRESS2[0:50]
+            test = [time,group_packet_size] + cumulative_packet_list + [page_number,]
+            F.append(test)
+            group_packet_size = 0
+            SOURCE_ADDRESS2 = []
+            DEST_ADDRESS2 = []
             cumulative_packet_list = []
             time = 0
-            initial_time = final_training['TIME'].iloc[0]
-            group_packet_size = 0
-            page_number = -1
-            cumulative_packets2 = 0
-            for index, row in final_training.iterrows():
-                if (row[0] - initial_time < 0.005):
-                    group_packet_size += row[2]
-                    cumulative_packet_list += [group_packet_size,]
-                    time += row[0]
-                    page_number = row[4]
-                    SOURCE_ADDRESS += str(row[1])
-                else:
-                    try:
-                        cumulative_packets = str(bin(int.from_bytes(encoding(cumulative_packets2), "little"))[2:])
-                        if length_of_source_address == 0:
-                            length_of_source_address = len(SOURCE_ADDRESS)
-                        else:
-                            if len(SOURCE_ADDRESS) < length_of_source_address:
-                                continue
-                            else:
-                                SOURCE_ADDRESS = str(bin(int.from_bytes(encoding(str(SOURCE_ADDRESS.replace(".", ""))), "little"))[2:])
-                                combined = cumulative_packets + SOURCE_ADDRESS
-                                reducer = [i for i in combined][0:58]
-                                test = [time,] + reducer + [group_packet_size, page_number]
-                                F.append(test)
-                                group_packet_size = 0
-                                SOURCE_ADDRESS = ""
-                                cumulative_packet_list = []
-                                time = 0
-                                k += 1
-                    except Exception:
-                        continue
-                    
+            initial_time = row['TIME']
+            count = 0
+        except Exception:
+            continue
+        
 
-            final_training = pd.DataFrame(F)
-            print(final_training)
+final_training = pd.DataFrame(F)
+final_training.drop_duplicates(inplace=True)
+print(final_training)
 
-X = final_training[final_training.columns[:60]] 
+X = final_training[final_training.columns[:-1]]
 Y = final_training[final_training.columns[-1]]
+
+print(X)
+print(Y)
+
 
 random.seed(0)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -158,7 +162,7 @@ print(y_test.shape)
 
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
-INPUT_SHAPE = (60,1)
+INPUT_SHAPE = (52,1)
 y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
 y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 print(y_train)
@@ -166,7 +170,7 @@ print(y_test)
 
 
 
-INPUT_SHAPE = (60,1)
+INPUT_SHAPE = (52,1)
 new_triplet_set = X_train
 new_test_set =  X_test
 
@@ -280,11 +284,11 @@ def cosine_triplet_loss(X):
     return keras.backend.mean(keras.backend.maximum(0.0, negative_sim - positive_sim + float(0.1))) 
 
 
-convolutional_neural_network = TripletFingerPrintingNeuralNetwork(input=(60,1), emb_vector_size=64)
+convolutional_neural_network = TripletFingerPrintingNeuralNetwork(input=(52,1), emb_vector_size=64)
 
-anchor = keras.layers.Input((60, 1), name='anchor')
-positive = keras.layers.Input((60, 1), name='positive')
-negative = keras.layers.Input((60, 1), name='negative')
+anchor = keras.layers.Input((52, 1), name='anchor')
+positive = keras.layers.Input((52, 1), name='positive')
+negative = keras.layers.Input((52, 1), name='negative')
 a = convolutional_neural_network(anchor)
 p = convolutional_neural_network(positive)
 n = convolutional_neural_network(negative)
