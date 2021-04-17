@@ -74,7 +74,9 @@ for subdir, dirs, files in os.walk(rootdir):
                 break
 
 
+print(len(final_training))
 final_training = pd.concat(training,axis=0,ignore_index=True).head(250000)
+
 #print(final_training)
 plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
 plt.show()

@@ -56,7 +56,7 @@ for subdir, dirs, files in os.walk(rootdir):
     for subdirs, dirs, files in os.walk(subdir):
         for file in files:
             count += 1
-            if count <= 40:
+            if count < 100:
                 page_number = subdirs.split("/")[-1]
                 filename = subdirs + "/" + file
                 df = pd.read_csv(filename, names=['TIME', 'SRC', 'DEST', 'PACKET_SIZE'])
@@ -74,8 +74,8 @@ for subdir, dirs, files in os.walk(rootdir):
                 break
 
 
-final_training = pd.concat(training,axis=0,ignore_index=True).head(500000)
-#print(final_training)
+final_training = pd.concat(training,axis=0,ignore_index=True)
+print(final_training)
 plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
 plt.show()
 #plt.scatter(final_training[['TIME']], final_training['PAGE_NUMBER'])
@@ -102,8 +102,8 @@ count = 0
 for index, row in final_training.iterrows():
     count += 1
     if (count <= 100):
-        group_packet_size += row['PACKET_SIZE']
-        cumulative_packet_list += [group_packet_size,] 
+        #group_packet_size += row['PACKET_SIZE']
+        cumulative_packet_list += [row['PACKET_SIZE'],] 
         time += row['TIME']
         page_number = row['PAGE_NUMBER']
         SOURCE_ADDRESS2 += [row['SRC'],]
