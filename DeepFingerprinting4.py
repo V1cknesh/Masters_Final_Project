@@ -15,9 +15,11 @@ class DeepFingerprintingNeuralNetwork:
 		sgd = keras.optimizers.SGD(learning_rate=0.1, momentum=1e-6, nesterov=False)
 		kernel_initialization = keras.initializers.glorot_uniform(seed=0)
 
+		model.add(keras.layers.Input(shape=input))
 		model.add(keras.layers.Dense(500, activation='relu', input_dim=input, name="softmax1"))
 		model.add(keras.layers.Dense(100, activation='relu', name="softmax2"))
 		model.add(keras.layers.Dense(N ** 2, activation='relu', name="softmax3"))
+		model.add(keras.layers.core.Flatten(name='flatten'))
 		model.add(keras.layers.Dense(N, activation='softmax', name="softmax4"))
 		
 

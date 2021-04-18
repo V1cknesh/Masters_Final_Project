@@ -55,7 +55,7 @@ for subdir, dirs, files in os.walk(rootdir):
     for subdirs, dirs, files in os.walk(subdir):
         for file in files:
             count += 1
-            if count < 50:
+            if count < 30:
                 page_number = subdirs.split("/")[-1]
                 filename = subdirs + "/" + file
                 df = pd.read_csv(filename, names=['TIME', 'SRC', 'DEST', 'PACKET_SIZE'])
@@ -73,9 +73,8 @@ for subdir, dirs, files in os.walk(rootdir):
                 break
 
 
-final_training = pd.concat(training,axis=0,ignore_index=True)
+final_training = pd.concat(training,axis=0,ignore_index=True).head(250000)
 print(final_training)
-final_training.to_csv(r'/home/student/MachineLearningTest/Masters_Final_Project/test.csv', header=None, index=None, sep=',', mode='a')
 
 #plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
 #plt.show()
@@ -86,8 +85,7 @@ final_training.to_csv(r'/home/student/MachineLearningTest/Masters_Final_Project/
 #plt.scatter(final_training[['DEST']], final_training['PAGE_NUMBER'])
 #plt.show()
 #print(final_training)
-final_training = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/test.csv', names=['TIME', 'SRC', 'DEST', 'PACKET_SIZE'])
-print(final_training)
+
 length_of_source_address = 0
 F = []
 k = 1
@@ -103,7 +101,7 @@ cumulative_packets2 = 0
 count = 0
 for index, row in final_training.iterrows():
     count += 1
-    if (count <= 80):
+    if (count <= 200):
         #group_packet_size += row['PACKET_SIZE']
         cumulative_packet_list += [row['PACKET_SIZE'],] 
         time += row['TIME']
@@ -111,20 +109,20 @@ for index, row in final_training.iterrows():
         SOURCE_ADDRESS2 += [row['SRC'],]
         DEST_ADDRESS2 += [row['DEST'],]
         initial_time = row['TIME']
-    elif (count > 80):
+    elif (count > 200):
         try:
-            if len(cumulative_packet_list) < 50:
-                cumulative_packet_list += [0] * (50 - len(cumulative_packet_list))
-            elif len(cumulative_packet_list) > 50:
-                cumulative_packet_list = cumulative_packet_list[0:50]
-            if len(SOURCE_ADDRESS2) < 50:
-                SOURCE_ADDRESS2 += [0] * (50 - len(SOURCE_ADDRESS2))
-            elif len(SOURCE_ADDRESS2) > 50:
-                SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:50]
-            if len(DEST_ADDRESS2) < 50:
-                DEST_ADDRESS2 += [0] * (50 - len(DEST_ADDRESS2))
-            elif len(DEST_ADDRESS2) > 50:
-                DEST_ADDRESS2 = DEST_ADDRESS2[0:50]
+            if len(cumulative_packet_list) < 200:
+                cumulative_packet_list += [0] * (200 - len(cumulative_packet_list))
+            elif len(cumulative_packet_list) > 200:
+                cumulative_packet_list = cumulative_packet_list[0:200]
+            if len(SOURCE_ADDRESS2) < 200:
+                SOURCE_ADDRESS2 += [0] * (200 - len(SOURCE_ADDRESS2))
+            elif len(SOURCE_ADDRESS2) > 200:
+                SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:200]
+            if len(DEST_ADDRESS2) < 200:
+                DEST_ADDRESS2 += [0] * (200 - len(DEST_ADDRESS2))
+            elif len(DEST_ADDRESS2) > 200:
+                DEST_ADDRESS2 = DEST_ADDRESS2[0:200]
             test = [time,group_packet_size] + cumulative_packet_list + [page_number,]
             F.append(test)
             group_packet_size = 0
@@ -164,8 +162,8 @@ print(y_train.shape)
 print(y_test.shape)
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
-INPUT_SHAPE = 52
-NUMBER_OF_PAGES=98
+INPUT_SHAPE = (202,1)
+NUMBER_OF_PAGES=80
 y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
 y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 
