@@ -10,25 +10,8 @@ Main research paper: It's Not Just the Site, It's the Contents: Intra-domain Fin
 
 Deep Fingerpring Model Paper: Deep Fingerprinting: Undermining Website Fingerprinting Defenses with Deep Learning
 
-Triplet Fingerprinting Paper: Triplet Fingerprinting: More Practical and Portable Website Fingerprinting with N-shot Learning
+Triplet Fingerprinting Paper: Triplet Fingerprinting: More Practical and Portable Website Fingerprinting with N-shot Learning.
 
-Feature Engineering
+Set up the python virtual environment and install the necessary libraries before proceeding to run the scripts.
 
-#Feature Engineering based of CDN bursts
-F = []
-k = 1
-B = []
-initial_time = final_filtered_testing['Time'].iloc[0]
-group_packet_size = 0
-for index, row in final_filtered_testing.iterrows():
-	if (row[0] - initial_time < threshold):
-		group_packet_size += row[2]
-		B.append([row[0], row[1], row[2], k, group_packet_size, row[3]])
-	else:
-		F.append([k, group_packet_size])
-		group_packet_size = 0
-		k += 1
-
-
-
-Run deep-fingerprinting-utility.py or triplet-fingerprinting-utility.py for model testing
+Run deep-fingerprinting-utility.py, triplet-fingerprinting-utility.py, utility.py, utility3.py, utility4.py, utility5.py for model testing

@@ -32,7 +32,6 @@ social_media_site="fb"
 alpha_value=0.05
 
 rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/TestDirectory/AWS_zip/fb/original_proc/'
-
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
 
 charset = 'abcdefghijklmnopqrstuvwxyz1234567890'
@@ -56,7 +55,7 @@ for subdir, dirs, files in os.walk(rootdir):
     for subdirs, dirs, files in os.walk(subdir):
         for file in files:
             count += 1
-            if count <= 40:
+            if count < 30:
                 page_number = subdirs.split("/")[-1]
                 filename = subdirs + "/" + file
                 df = pd.read_csv(filename, names=['TIME', 'SRC', 'DEST', 'PACKET_SIZE'])
@@ -74,10 +73,9 @@ for subdir, dirs, files in os.walk(rootdir):
                 break
 
 
-print(len(final_training))
-final_training = pd.concat(training,axis=0,ignore_index=True).head(250000)
+final_training = pd.concat(training,axis=0,ignore_index=True).head(2500000)
+print(final_training)
 
-#print(final_training)
 plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
 plt.show()
 #plt.scatter(final_training[['TIME']], final_training['PAGE_NUMBER'])
@@ -103,28 +101,28 @@ cumulative_packets2 = 0
 count = 0
 for index, row in final_training.iterrows():
     count += 1
-    if (count <= 100):
-        group_packet_size += row['PACKET_SIZE']
-        cumulative_packet_list += [group_packet_size,] 
+    if (count <= 200):
+        #group_packet_size += row['PACKET_SIZE']
+        cumulative_packet_list += [row['PACKET_SIZE'],] 
         time += row['TIME']
         page_number = row['PAGE_NUMBER']
         SOURCE_ADDRESS2 += [row['SRC'],]
         DEST_ADDRESS2 += [row['DEST'],]
         initial_time = row['TIME']
-    elif (count > 100):
+    elif (count > 200):
         try:
-            if len(cumulative_packet_list) < 50:
-                cumulative_packet_list += [0] * (50 - len(cumulative_packet_list))
-            elif len(cumulative_packet_list) > 50:
-                cumulative_packet_list = cumulative_packet_list[0:50]
-            if len(SOURCE_ADDRESS2) < 50:
-                SOURCE_ADDRESS2 += [0] * (50 - len(SOURCE_ADDRESS2))
-            elif len(SOURCE_ADDRESS2) > 50:
-                SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:50]
-            if len(DEST_ADDRESS2) < 50:
-                DEST_ADDRESS2 += [0] * (50 - len(DEST_ADDRESS2))
-            elif len(DEST_ADDRESS2) > 50:
-                DEST_ADDRESS2 = DEST_ADDRESS2[0:50]
+            if len(cumulative_packet_list) < 200:
+                cumulative_packet_list += [0] * (200 - len(cumulative_packet_list))
+            elif len(cumulative_packet_list) > 200:
+                cumulative_packet_list = cumulative_packet_list[0:200]
+            if len(SOURCE_ADDRESS2) < 200:
+                SOURCE_ADDRESS2 += [0] * (200 - len(SOURCE_ADDRESS2))
+            elif len(SOURCE_ADDRESS2) > 200:
+                SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:200]
+            if len(DEST_ADDRESS2) < 200:
+                DEST_ADDRESS2 += [0] * (200 - len(DEST_ADDRESS2))
+            elif len(DEST_ADDRESS2) > 200:
+                DEST_ADDRESS2 = DEST_ADDRESS2[0:200]
             test = [time,group_packet_size] + cumulative_packet_list + [page_number,]
             F.append(test)
             group_packet_size = 0
@@ -164,7 +162,7 @@ print(y_test.shape)
 
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
-INPUT_SHAPE = (52,1)
+INPUT_SHAPE = (202,1)
 y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
 y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 print(y_train)
@@ -172,7 +170,7 @@ print(y_test)
 
 
 
-INPUT_SHAPE = (52,1)
+INPUT_SHAPE = (202,1)
 new_triplet_set = X_train
 new_test_set =  X_test
 
@@ -286,11 +284,11 @@ def cosine_triplet_loss(X):
     return keras.backend.mean(keras.backend.maximum(0.0, negative_sim - positive_sim + float(0.1))) 
 
 
-convolutional_neural_network = TripletFingerPrintingNeuralNetwork(input=(52,1), emb_vector_size=64)
+convolutional_neural_network = TripletFingerPrintingNeuralNetwork(input=(202,1), emb_vector_size=64)
 
-anchor = keras.layers.Input((52, 1), name='anchor')
-positive = keras.layers.Input((52, 1), name='positive')
-negative = keras.layers.Input((52, 1), name='negative')
+anchor = keras.layers.Input((202, 1), name='anchor')
+positive = keras.layers.Input((202, 1), name='positive')
+negative = keras.layers.Input((202, 1), name='negative')
 a = convolutional_neural_network(anchor)
 p = convolutional_neural_network(positive)
 n = convolutional_neural_network(negative)
@@ -473,9 +471,7 @@ print(new_triplet_set_testing.shape)
 print(anchor_test.shape)
 print(positive_test.shape)
 print(len(all_traces_test_idx))
-
-y_test = pd.read_csv('/home/student/MachineLearningTest/Masters_Final_Project/Y_testing-0.1.csv', index_col=0)
-y_test = np_utils.to_categorical(y_test.to_numpy())
+print(y_test.shape)
 
 gen_hard = TripletGenerator(anchor_test, positive_test, 30, new_triplet_set_testing, all_traces_test_idx, convolutional_neural_network)
 pre_cla = model_triplet.predict(gen_hard.next_train(), verbose=1, steps=128)

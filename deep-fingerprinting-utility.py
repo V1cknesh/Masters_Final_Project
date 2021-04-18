@@ -146,40 +146,6 @@ print("AUC Score")
 print("*******************")
 print(auc_keras)
 
-#print("Plot the Micro Average of ROC of all classes")
-#print("*******************")
-
-#FPR, TPR, threshold_keras = roc_curve(y_test.ravel(), y_pred.ravel())
-
-#plt.figure()
-#plt.plot(FPR, TPR, label='Micro average ROC curve')
-
-#all_fpr = []
-#for i in range(0,100):
-#    try:
-#        all_fpr += [FPR[i],]
-#        FPR[i]
-#    except Exception:
-#        continue
-#all_fpr = np.unique(all_fpr)
-#mean_tpr = np.zeros_like(all_fpr)
-#for i in range(0,100):
-#    try:
-#        mean_tpr += interp(all_fpr, FPR[i], TPR[i])
-#    except Exception:
-#        continue
- 
-#auc_curve = auc(FPR, TPR)
-
-#print("Plot the Macro Average of ROC of all classes")
-#print("*******************")
-
-#plt.figure()
-#plt.plot(FPR, TPR, label='Macro Average Curve')
-#plt.show()
-
-
-#gc.collect()
 
 
 

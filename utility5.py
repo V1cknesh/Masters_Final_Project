@@ -73,18 +73,12 @@ for subdir, dirs, files in os.walk(rootdir):
                 break
 
 
-final_training = pd.concat(training,axis=0,ignore_index=True).head(250000)
+final_training = pd.concat(training,axis=0,ignore_index=True).head(3000000)
 print(final_training)
 
-#plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
-#plt.show()
-#plt.scatter(final_training[['TIME']], final_training['PAGE_NUMBER'])
-#plt.show()
-#plt.scatter(final_training[['SRC']], final_training['PAGE_NUMBER'])
-#plt.show()
-#plt.scatter(final_training[['DEST']], final_training['PAGE_NUMBER'])
-#plt.show()
-#print(final_training)
+plt.scatter(final_training[['PACKET_SIZE']], final_training['PAGE_NUMBER'])
+plt.show()
+
 
 length_of_source_address = 0
 F = []
@@ -143,9 +137,6 @@ print(final_training)
 X = final_training[final_training.columns[:-1]]
 Y = final_training[final_training.columns[-1]]
 
-print(X)
-print(Y)
-
 
 random.seed(0)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -155,15 +146,15 @@ X_train = X_train.to_numpy().astype("float32")
 X_test = X_test.to_numpy().astype("float32")
 
 
-
 print(X_train.shape)
 print(X_test.shape)
 print(y_train.shape)
 print(y_test.shape)
+
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
 INPUT_SHAPE = (202,1)
-NUMBER_OF_PAGES=80
+NUMBER_OF_PAGES=101
 y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
 y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 
@@ -172,7 +163,7 @@ y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 
 model = DeepFingerprintingNeuralNetwork.neuralnetwork(input=INPUT_SHAPE, N=NUMBER_OF_PAGES)
 model.summary()
-history = model.fit(X_train, y_train, batch_size=100,shuffle=True, epochs=60, verbose=1, validation_data=(X_test, y_test))
+history = model.fit(X_train, y_train, batch_size=1000,shuffle=True, epochs=60, verbose=1, validation_data=(X_test, y_test))
 
 
 print(history.history)
