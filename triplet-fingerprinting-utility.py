@@ -31,7 +31,7 @@ threshold3=0.05
 social_media_site="fb"
 alpha_value=0.05
 
-rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/TestDirectory/AWS_zip/fb/original_proc/'
+rootdir = '/home/student/MachineLearningTest/Masters_Final_Project/TestDirectory/AWS_zip/youtube/original_proc/'
 SOURCE_IPADDRESS = ['172.31.40', '172.31.47', '172.31.36', '172.31.46', '172.31.33']
 
 charset = 'abcdefghijklmnopqrstuvwxyz1234567890'
@@ -101,7 +101,7 @@ cumulative_packets2 = 0
 count = 0
 for index, row in final_training.iterrows():
     count += 1
-    if (count <= 200):
+    if (count <= 2000):
         #group_packet_size += row['PACKET_SIZE']
         cumulative_packet_list += [row['PACKET_SIZE'],] 
         time += row['TIME']
@@ -109,20 +109,20 @@ for index, row in final_training.iterrows():
         SOURCE_ADDRESS2 += [row['SRC'],]
         DEST_ADDRESS2 += [row['DEST'],]
         initial_time = row['TIME']
-    elif (count > 200):
+    elif (count > 2000):
         try:
-            if len(cumulative_packet_list) < 200:
-                cumulative_packet_list += [0] * (200 - len(cumulative_packet_list))
-            elif len(cumulative_packet_list) > 200:
-                cumulative_packet_list = cumulative_packet_list[0:200]
-            if len(SOURCE_ADDRESS2) < 200:
-                SOURCE_ADDRESS2 += [0] * (200 - len(SOURCE_ADDRESS2))
-            elif len(SOURCE_ADDRESS2) > 200:
-                SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:200]
-            if len(DEST_ADDRESS2) < 200:
-                DEST_ADDRESS2 += [0] * (200 - len(DEST_ADDRESS2))
-            elif len(DEST_ADDRESS2) > 200:
-                DEST_ADDRESS2 = DEST_ADDRESS2[0:200]
+            if len(cumulative_packet_list) < 2000:
+                cumulative_packet_list += [0] * (2000 - len(cumulative_packet_list))
+            elif len(cumulative_packet_list) > 2000:
+                cumulative_packet_list = cumulative_packet_list[0:2000]
+            if len(SOURCE_ADDRESS2) < 2000:
+                SOURCE_ADDRESS2 += [0] * (2000 - len(SOURCE_ADDRESS2))
+            elif len(SOURCE_ADDRESS2) > 2000:
+                SOURCE_ADDRESS2 = SOURCE_ADDRESS2[0:2000]
+            if len(DEST_ADDRESS2) < 2000:
+                DEST_ADDRESS2 += [0] * (2000 - len(DEST_ADDRESS2))
+            elif len(DEST_ADDRESS2) > 2000:
+                DEST_ADDRESS2 = DEST_ADDRESS2[0:2000]
             test = [time,group_packet_size] + cumulative_packet_list + [page_number,]
             F.append(test)
             group_packet_size = 0
@@ -162,7 +162,7 @@ print(y_test.shape)
 
 X_train = X_train[:, :,np.newaxis]
 X_test = X_test[:, :,np.newaxis]
-INPUT_SHAPE = (202,1)
+INPUT_SHAPE = (2002,1)
 y_train = np_utils.to_categorical(y_train.astype(int).to_numpy())
 y_test = np_utils.to_categorical(y_test.astype(int).to_numpy())
 print(y_train)
@@ -170,7 +170,7 @@ print(y_test)
 
 
 
-INPUT_SHAPE = (202,1)
+INPUT_SHAPE = (2002,1)
 new_triplet_set = X_train
 new_test_set =  X_test
 
@@ -284,11 +284,11 @@ def cosine_triplet_loss(X):
     return keras.backend.mean(keras.backend.maximum(0.0, negative_sim - positive_sim + float(0.1))) 
 
 
-convolutional_neural_network = TripletFingerPrintingNeuralNetwork(input=(202,1), emb_vector_size=64)
+convolutional_neural_network = TripletFingerPrintingNeuralNetwork(input=(2002,1), emb_vector_size=64)
 
-anchor = keras.layers.Input((202, 1), name='anchor')
-positive = keras.layers.Input((202, 1), name='positive')
-negative = keras.layers.Input((202, 1), name='negative')
+anchor = keras.layers.Input((2002, 1), name='anchor')
+positive = keras.layers.Input((2002, 1), name='positive')
+negative = keras.layers.Input((2002, 1), name='negative')
 a = convolutional_neural_network(anchor)
 p = convolutional_neural_network(positive)
 n = convolutional_neural_network(negative)
