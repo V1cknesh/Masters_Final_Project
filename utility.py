@@ -94,7 +94,6 @@ count = 0
 for index, row in final_training.iterrows():
     count += 1
     if (count <= 2000):
-        #group_packet_size += row['PACKET_SIZE']
         cumulative_packet_list += [row['PACKET_SIZE'],] 
         time += row['TIME']
         page_number = row['PAGE_NUMBER']
